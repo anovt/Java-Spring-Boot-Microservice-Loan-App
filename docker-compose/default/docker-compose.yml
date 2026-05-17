@@ -172,12 +172,12 @@ services:
        cards:
          condition: service_healthy
 
+
      environment:
        SPRING_APPLICATION_NAME: "gatewayserver"
      extends:
        file: common-config.yml
        service: microservice-eureka-config
-
 
 networks:
   eazybank:
