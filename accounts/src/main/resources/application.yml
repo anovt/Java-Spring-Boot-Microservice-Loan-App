@@ -32,6 +32,7 @@ info:
     description: "This microservice manages customer accounts and related operations."
     version: "1.0.0"
 
+
 management:
   endpoints:
     web:
