@@ -204,6 +204,7 @@ public class CardsController {
             )
     }
     )
+
     @GetMapping("/build-info")
     public ResponseEntity<String> getBuildInfo() {
         return ResponseEntity

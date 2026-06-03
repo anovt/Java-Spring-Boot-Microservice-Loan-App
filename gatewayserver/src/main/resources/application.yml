@@ -11,8 +11,15 @@ spring:
             locator:
               enabled: false
               lowerCaseServiceId: true
-
-
+          httpclient:
+            connect-timeout: 1000
+            response-timeout: 10s
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 1000
+      connect-timeout: 2000
 
 management:
   endpoints:
@@ -25,6 +32,9 @@ management:
   info:
     env:
       enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 info:
   app:
@@ -39,5 +49,17 @@ logging:
        microservice:
          app:
            gatewayserver: DEBUG
+
+
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
 
 

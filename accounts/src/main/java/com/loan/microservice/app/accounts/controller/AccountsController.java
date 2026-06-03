@@ -7,6 +7,8 @@ import com.loan.microservice.app.accounts.dto.ErrorResponseDto;
 import com.loan.microservice.app.accounts.dto.ResponseDto;
 import com.loan.microservice.app.accounts.service.IAccountsService;
 import com.loan.microservice.app.accounts.service.ICustomerService;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,8 +19,10 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -27,6 +31,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.print.attribute.standard.Media;
+import java.time.LocalDateTime;
+import java.util.concurrent.TimeoutException;
 
 @Tag(
         name = "CRUD REST APIs for Accounts in Loans Application",
@@ -36,13 +42,18 @@ import javax.print.attribute.standard.Media;
 @RequestMapping(path = "/api/v1")
 @Validated
 @RequiredArgsConstructor
+@Slf4j
 public class AccountsController {
 
 
     private final IAccountsService accountsService;
     private final ICustomerService customerService;
 
+    @Value("${build.version}")
+    private  String buildVersion;
 
+    @Autowired
+    private Environment environment;
 
 
     @Autowired
@@ -89,6 +100,75 @@ public class AccountsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseDto(AccountConstants.STATUS_417, AccountConstants.MESSAGE_417_DELETE));
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ResponseDto(AccountConstants.STATUS_200, "Account deleted successfully"));
+    }
+
+    @Operation(
+            summary = "Get Java version",
+            description = "Get Java versions details that is installed into cards microservice"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "HTTP Status OK"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "HTTP Status Internal Server Error",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponseDto.class)
+                    )
+            )
+    }
+    )
+    @RateLimiter(name = "javaVersion",fallbackMethod = "getJavaVersionFallback")
+    @GetMapping("/java-version")
+    public ResponseEntity<String> getJavaVersion() {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(environment.getProperty("JAVA_HOME"));
+    }
+
+    public ResponseEntity<String> getJavaVersionFallback(Throwable throwable) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body("Java 17");
+    }
+
+    @Operation(
+            summary = "Get Build information",
+            description = "Get Build information that is deployed into cards microservice"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "HTTP Status OK"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "HTTP Status Internal Server Error",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponseDto.class)
+                    )
+            )
+    }
+    )
+
+    @Retry(name = "buildInfo",fallbackMethod = "buildInfoFallback")
+    @GetMapping("/build-info")
+    public ResponseEntity<String> getBuildInfo() throws TimeoutException {
+        log.debug("getBuildInfo is called due to: {}", LocalDateTime.now());
+        //throw new NullPointerException();
+        //throw new TimeoutException();
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(buildVersion);
+    }
+
+    public ResponseEntity<String> buildInfoFallback(Throwable throwable) {
+       log.debug("buildInfoFallback is called due to: {}", LocalDateTime.now());
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body("0.9");
     }
 
     @Operation(
